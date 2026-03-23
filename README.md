@@ -1,4 +1,4 @@
-# Wings-Prompters: Codebase Intelligence Agent
+# NAVIgit: Codebase Intelligence Agent
 
 **AI-Powered System for Understanding Large Code Repositories**
 
@@ -14,8 +14,8 @@ Modern software projects contain large and complex codebases with deeply nested 
 
 ---
 
-## The Solution: Wings-Prompters
-Wings-Prompters is a high-performance, AI-driven assistant designed to eliminate the "onboarding bottleneck." By combining automated architectural mapping with Retrieval-Augmented Generation (RAG), it allows developers to visualize project structures and chat directly with an AI that has analyzed the entire codebase in seconds.
+## The Solution: NAVIgit
+NAVIgit is a high-performance, AI-driven assistant designed to eliminate the "onboarding bottleneck." By combining automated architectural mapping with Retrieval-Augmented Generation (RAG), it allows developers to visualize project structures and chat directly with an AI that has analyzed the entire codebase in seconds.
 
 ### Key Features
 - **Architectural Analysis**: Automatic generation of folder structures, entry point identification, and technology stack detection.
@@ -68,7 +68,7 @@ Open `frontend/index.html` in your browser to begin analysis.
 ---
 
 ## Project Impact
-Wings-Prompters reduces the time spent on "code discovery" by up to 80%, allowing developers to focus on writing code and fixing bugs rather than deciphering complex file systems. It is the ultimate tool for rapid onboarding and legacy codebase maintenance.
+NAVIgit reduces the time spent on "code discovery" by up to 80%, allowing developers to focus on writing code and fixing bugs rather than deciphering complex file systems. It is the ultimate tool for rapid onboarding and legacy codebase maintenance.
 
 ---
-*Developed for the Codebase Intelligence Hackathon.*
+*Developed by **Team Prompters** for the Codebase Intelligence Hackathon.*
