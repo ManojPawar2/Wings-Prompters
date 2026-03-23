@@ -1,165 +1,87 @@
-﻿# NAVIgit (WINGS_PROMPTERS)
+# 🪽 Wings-Prompters: AI Codebase Intelligence Agent
 
-AI-powered GitHub repository intelligence with:
+Wings-Prompters is a high-performance, AI-driven tool designed to give engineers instant, deep insights into any GitHub repository. By combining advanced architectural mapping with Retrieval-Augmented Generation (RAG), it allows you to visualize project structures and chat directly with an AI that has "read" the entire codebase.
 
-- **M1** Folder structure explanation
-- **M2** Entry point + execution flow analysis
-- **M3** Dependency graph visualization
-- **RAG chat** over indexed repository context (B1/B2/B3 modes)
+---
 
-## Tech Stack
+## ✨ Key Features
 
-- **Frontend:** Vanilla HTML, CSS, JS (`frontend/`)
-- **Backend API:** FastAPI (`backend/`)
-- **LLM Providers:** Gemini + Groq fallback
-- **RAG Retrieval:** FAISS + LangChain
+- **🚀 Unified Analysis**: One-click analysis that generates folder structures, identifies entry points, and maps dependencies while simultaneously indexing the repo for AI chat.
+- **💬 Smart RAG Chat**: Ask complex technical questions about the repo. Powered by **Groq (Llama 3.3)** for reasoning and **Gemini** for high-dimensional code embeddings.
+- **🗺️ Dependency Mapping**: Visualizes how files interact, helping you understand the complex web of imports and calls in seconds.
+- **🎨 Premium UI**: A sleek, dark-mode interface with a **horizontal resizable chat panel** and real-time status tracking.
+- **💾 Intelligent Persistence**: FAISS vector indices are persisted locally, so you don't have to re-index repo's you've already visited.
+- **🛡️ Quota Safety Net**: Built-in fallback logic that uses architectural summaries when API limits are reached, ensuring you're never left without an answer.
 
-## Repository Layout
+---
 
-```text
-frontend/                Static UI (NAVIgit)
-backend/
-  app/                   Analysis pipeline + API routes (/analyze, /chat)
-  api/                   RAG routes (/rag/index, /rag/chat, /rag/status)
-  services/              Embedding, ingestion, vector store, chat services
-rag-backend/             Standalone RAG backend variant (optional)
+## 🛠️ Tech Stack
+
+- **Backend**: Python (FastAPI, Uvicorn)
+- **AI/LLM**: LangChain, Groq (Llama 3.3 70B), Google Gemini (Embeddings)
+- **Vector Store**: FAISS (Facebook AI Similarity Search)
+- **Frontend**: Modern Vanilla JavaScript, CSS3 (Glassmorphism), Semantic HTML5
+- **Data Handling**: Parallelized embedding processing with multi-key support
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Python 3.9+
+- A modern web browser
+- API Keys for **Groq** and **Google Gemini** (Free Tier works!)
+
+### 1. Installation
+
+Clone the repository:
+```bash
+git clone https://github.com/ManojPawar2/Wings-Prompters.git
+cd Wings-Prompters
 ```
 
-## Quick Start
-
-## 1) Backend Setup
-
+Install Backend Dependencies:
 ```bash
 cd backend
 pip install -r requirements.txt
 ```
 
-Create/update `backend/.env`:
+### 2. Environment Setup
 
+Create a `.env` file in the `backend` folder:
 ```env
-# Analysis backend
-GEMINI_API_KEY_PRIMARY=your_key
-GEMINI_API_KEY_SECONDARY=your_key
-GROQ_API_KEY=your_key
-GITHUB_TOKEN=your_token
-
-# RAG backend (same process)
-GEMINI_API_KEY_RAG=your_key
-GROQ_API_KEY_RAG=your_key
-GITHUB_TOKEN_RAG=your_token
+GEMINI_API_KEY_PRIMARY=your_gemini_key_here
+GEMINI_API_KEY_SECONDARY=optional_second_key_for_higher_quota
+GROQ_API_KEY=your_groq_key_here
+GITHUB_TOKEN=your_github_personal_access_token
 ```
 
-Run API:
+### 3. Running the App
 
+Start the Backend:
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 5000 --reload
+cd backend
+uvicorn app.main:app --reload --port 8000
 ```
 
-Health check:
+Open the Frontend:
+Simply open `frontend/index.html` in your browser (or use VS Code "Live Server").
 
-```bash
-GET http://localhost:5000/health
-```
+---
 
-## 2) Frontend Setup
+## 📖 Usage
 
-Serve `frontend/` on port `5500` (VS Code Live Server recommended).
+1. **Enter URL**: Paste any public GitHub repository URL into the landing page.
+2. **Analyze**: Watch as the agent maps out the tech stack, files, and dependencies.
+3. **Chat**: Open the **"Ask AI"** panel on the right. Slide it to your preferred width and start asking questions like *"How does the authentication flow work?"* or *"Where is the main entry point for data processing?"*
 
-- URL: `http://localhost:5500`
-- Backend expected at: `http://localhost:5000`
+---
 
-## API Overview
+## 🛡️ License
+Distributed under the MIT License. See `LICENSE` for more information.
 
-## `POST /analyze`
+## 🤝 Contributing
+Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
-Request:
-
-```json
-{
-  "github_url": "https://github.com/owner/repo"
-}
-```
-
-Response (normalized):
-
-```json
-{
-  "m1_folder_explanation": {},
-  "m2_entry_analysis": {
-    "entry_file": "...",
-    "execution_flow": []
-  },
-  "m3_dependency_graph": [
-    { "source": "...", "target": "..." }
-  ],
-  "m3_architecture_summary": "..."
-}
-```
-
-## `POST /chat`
-
-Request:
-
-```json
-{
-  "message": "Explain the startup flow",
-  "repo_url": "owner/repo"
-}
-```
-
-Response:
-
-```json
-{
-  "reply": "..."
-}
-```
-
-## `POST /rag/index`
-
-Indexes repo for RAG chat:
-
-```json
-{
-  "github_url": "https://github.com/owner/repo"
-}
-```
-
-## `GET /rag/status`
-
-Returns whether current repo is indexed.
-
-## `POST /rag/chat`
-
-Request:
-
-```json
-{
-  "question": "What are critical files?",
-  "mode": "B1"
-}
-```
-
-Modes:
-
-- `B1` Critical files
-- `B2` Execution flow
-- `B3` Architecture summary
-
-## Troubleshooting
-
-- **Analyze button shows backend error:** confirm backend is running on `:5000`.
-- **CORS issues:** frontend should run on localhost/127.0.0.1; backend allows local dev origins.
-- **GitHub rate limit:** provide valid `GITHUB_TOKEN` / `GITHUB_TOKEN_RAG`.
-- **RAG not ready yet:** call `/rag/index`, or wait for `/rag/status` to become indexed.
-
-## Security Notes
-
-- Never commit real API keys/tokens.
-- Rotate any keys previously exposed.
-- Keep `.env` values local and secret.
-
-## License
-
-MIT (or project team license choice).
-
+---
+*Built with ❤️ for the developer community.*
