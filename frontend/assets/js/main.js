@@ -1,6 +1,7 @@
 /* MAIN.JS - App Entry & Page Routing */
 const MOCK_API = false;
-const ANALYZE_API_BASE = window.__API_BASE__ || 'http://localhost:8000';
+// Production API URL (Railway)
+const ANALYZE_API_BASE = window.__API_BASE__ || 'https://wings-prompters-production.up.railway.app';
 
 document.addEventListener('DOMContentLoaded', () => {
   const repoUrlInput = document.getElementById('repo-url');

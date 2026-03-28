@@ -2,7 +2,7 @@
    CHAT.JS — AI Chat Logic (Mock & API modes)
    Codebase Intelligence Agent
 ══════════════════════════════════════════════════════ */
-const RAG_API_BASE = window.__RAG_API_BASE__ || 'http://localhost:8000';
+const RAG_API_BASE = window.__RAG_API_BASE__ || 'https://zooming-victory-production.up.railway.app';
 let currentMode = 'B3';
 let ragReady = false;
 
