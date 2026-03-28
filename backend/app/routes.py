@@ -244,9 +244,21 @@ async def analyze(request: AnalyzeRequest, background_tasks: BackgroundTasks) ->
 
     try:
         logger.info("[API] repository analysis started")
-        # 1. Trigger RAG indexing in the background immediately
-        # This allows the AI chat to become ready while the user browses the architecture.
-        background_tasks.add_task(rag_service.index_repository, request.github_url)
+        # 1. Trigger RAG indexing in the background on the separate RAG microservice
+        import httpx
+        import os
+        
+        # Get RAG URL from env or use default Railway URL
+        rag_url = os.getenv("RAG_API_BASE", "https://zooming-victory-production.up.railway.app")
+        
+        def trigger_rag_indexing(url: str, repo: str):
+            try:
+                # Fire and forget request to the RAG service
+                httpx.post(f"{url}/rag/index", json={"github_url": repo}, timeout=10.0)
+            except Exception as e:
+                logger.error(f"Failed to trigger RAG indexer: {e}")
+
+        background_tasks.add_task(trigger_rag_indexing, rag_url, request.github_url)
         
         raw_result = await run_analysis(request.github_url)
         normalized_payload = _normalize_analysis_payload(raw_result)
