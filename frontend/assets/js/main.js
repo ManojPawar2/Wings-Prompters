@@ -132,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const isConnectionError = msg.includes('Failed to fetch') || msg.includes('NetworkError');
       
       const errorText = isConnectionError
-        ? 'Cannot reach backend at ' + ANALYZE_API_BASE + '. Please ensure the backend is running on port 8000.'
+        ? 'Cannot reach backend at ' + ANALYZE_API_BASE + '. Please check if the backend service is running.'
         : ('Error: ' + msg);
 
       // Show error on input page if we are there
