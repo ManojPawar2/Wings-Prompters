@@ -45,3 +45,12 @@ from fastapi.responses import RedirectResponse
 async def root():
     """Redirect to the Swagger UI automatically."""
     return RedirectResponse(url="/docs")
+
+
+if __name__ == "__main__":
+    import uvicorn
+    # Railway passes a dynamic port via the PORT environment variable.
+    # We safely read it here so there are zero Start Command syntax issues.
+    port = int(os.getenv("PORT", 8080))
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
+
