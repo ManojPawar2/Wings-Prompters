@@ -49,3 +49,9 @@ app.include_router(rag_router, prefix="/rag", tags=["RAG"])
 @app.get("/health", tags=["ops"])
 async def health() -> dict[str, str]:
     return {"status": "ok"}
+
+if __name__ == "__main__":
+    import uvicorn
+    import os
+    port = int(os.getenv("PORT", 8080))
+    uvicorn.run("app.main:app", host="0.0.0.0", port=port)
