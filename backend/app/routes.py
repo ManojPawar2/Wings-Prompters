@@ -229,7 +229,7 @@ def _parse_repo_reference(repo_ref: str) -> tuple[str, str]:
 
 
 @router.post(
-    "/analyze",
+    "/process-repo",
     response_model=AnalyzeResponse,
     response_model_exclude_none=True,
     summary="Analyse a public GitHub repository",
@@ -240,7 +240,7 @@ def _parse_repo_reference(repo_ref: str) -> tuple[str, str]:
     ),
 )
 async def analyze(request: AnalyzeRequest, background_tasks: BackgroundTasks) -> AnalyzeResponse:
-    logger.info("[API] /analyze request received")
+    logger.info("[API] /process-repo request received")
 
     try:
         logger.info("[API] repository analysis started")

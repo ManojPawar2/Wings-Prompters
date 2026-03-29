@@ -103,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.startStatusPolling();
       }
 
-      const res = await fetch(ANALYZE_API_BASE + '/analyze', {
+      const res = await fetch(ANALYZE_API_BASE + '/process-repo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ github_url: githubUrl })
@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
       hideLoading();
       renderAll(data);
     } catch (err) {
-      console.error('[NAVIgit] /analyze failed:', err);
+      console.error('[NAVIgit] /process-repo failed:', err);
       hideLoading();
       // showPage('input-page');
       
