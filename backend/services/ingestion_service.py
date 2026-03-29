@@ -40,7 +40,7 @@ def create_documents(files: list[dict]) -> list[Document]:
     into overlapping chunks and return a list of LangChain Document objects.
 
     Each Document:
-      - page_content : "FILE_PATH: <path>\\nCODE:\\n<chunk text>"
+      - page_content : "FILE_PATH: <path>\nCODE:\n<chunk text>"
       - metadata     : {"file_path": str, "chunk_index": int}
     """
     splitter = build_splitter()

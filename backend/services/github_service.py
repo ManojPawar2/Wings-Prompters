@@ -47,7 +47,7 @@ IGNORED_DIRS = {
     "out",
 }
 
-MAX_FILES = 250
+MAX_FILES = 200
 MAX_FILE_BYTES = 500 * 1024  # 500 KB
 
 GITHUB_API_BASE = "https://api.github.com"
@@ -135,7 +135,7 @@ def fetch_repository_files(github_url: str) -> tuple[list[dict], dict]:
 
     # 1. Fetch entire repository as a single ZIP file
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/zipball/{branch}"
-    response = requests.get(url, headers=_get_headers(), stream=True, timeout=60)
+    response = requests.get(url, headers=_get_headers(), stream=True, timeout=30)
     _check_api_error(response)
 
     files = []

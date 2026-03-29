@@ -8,36 +8,30 @@ EMBEDDING_MODEL = "models/gemini-embedding-001"
 def get_all_embeddings() -> list[GoogleGenerativeAIEmbeddings]:
     """
     Initialise and return a list of GoogleGenerativeAIEmbeddings instances.
-    Reads GEMINI_API_KEY_RAG (or fallback GEMINI_API_KEY) from the environment,
-    allowing comma-separated multiple keys.
+    Reads GEMINI_API_KEY from the environment, allowing comma-separated multiple keys.
     Automatically filters out dummy/placeholder keys starting with 'AIzaSy_KEY_'.
     """
-    # Collect all possible keys from environment
-    key_sources = [
-        os.getenv("GEMINI_API_KEY_RAG"),
-        os.getenv("GEMINI_API_KEY_PRIMARY"),
-        os.getenv("GEMINI_API_KEY_SECONDARY"),
-        os.getenv("GEMINI_API_KEY"),
-        os.getenv("GOOGLE_API_KEY")
-    ]
-    
-    # Filter out None and empty strings, and handle comma-separated lists
-    all_keys_raw = []
-    for source in key_sources:
-        if source:
-            all_keys_raw.extend([k.strip() for k in source.split(",") if k.strip()])
+    api_key_str = (
+        os.getenv("GEMINI_API_KEY_RAG") 
+        or os.getenv("GEMINI_API_KEY_PRIMARY") 
+        or os.getenv("GEMINI_API_KEY_SECONDARY") 
+        or os.getenv("GEMINI_API_KEY", "")
+    )
+
+    # Split, strip, and ignore dummy placeholders
+    raw_keys = [k.strip() for k in api_key_str.split(",") if k.strip()]
     
     valid_keys = []
-    seen = set()
-    for k in all_keys_raw:
-        if k not in seen and "_KEY_" not in k.upper():
-            valid_keys.append(k)
-            seen.add(k)
+    for k in raw_keys:
+        # Ignore obvious placeholders like AIzaSy_KEY_1
+        if "_KEY_" in k.upper():
+            continue
+        valid_keys.append(k)
 
     if not valid_keys:
         raise EnvironmentError(
             "No valid GEMINI_API_KEY found. "
-            "Please check your .env file and ensure a real key is provided."
+            "Please check your .env file and ensure real keys are provided."
         )
         
     return [

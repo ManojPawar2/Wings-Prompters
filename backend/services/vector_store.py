@@ -125,41 +125,16 @@ def build(documents: list[Document], embeddings_list: list[GoogleGenerativeAIEmb
     }
 
 
-def load() -> bool:
-    """Tries to load the FAISS index from disk."""
-    global _store, _stats
-    if os.path.exists(PERSIST_DIRECTORY):
-        try:
-            print(f"[DEBUG] Loading existing FAISS index from: {PERSIST_DIRECTORY}")
-            model = _get_embedding_model()
-            _store = FAISS.load_local(PERSIST_DIRECTORY, model, allow_dangerous_deserialization=True)
-            
-            # Restore basic stats if possible (LangChain doesn't store count directly, but we can count)
-            if _store and _store.index:
-                _stats = {
-                    "files_indexed": "Loaded",
-                    "chunks_indexed": _store.index.ntotal
-                }
-            return True
-        except Exception as e:
-            print(f"[DEBUG] Failed to load index from disk: {e}")
-    return False
-
-
 def search(query: str, embeddings: GoogleGenerativeAIEmbeddings, k: int = 5) -> list[Document]:
     """
     Embed *query* and return the top-k most similar Documents.
-    Automatically tries to load from disk if the in-memory store is empty.
+    Raises RuntimeError if no repository has been indexed yet.
     """
-    global _store
     if _store is None:
-        if not load():
-            # If still None, then we really don't have an index
-            raise RuntimeError(
-                "No repository has been indexed yet. "
-                "Please call POST /rag/index first."
-            )
-            
+        raise RuntimeError(
+            "No repository has been indexed yet. "
+            "Please call POST /rag/index first."
+        )
     results = _store.similarity_search(query, k=k)
     return results
 
@@ -170,9 +145,5 @@ def get_stats() -> dict:
 
 
 def is_ready() -> bool:
-    """Return True if a repository is currently indexed (in memory or on disk)."""
-    global _store
-    if _store is not None:
-        return True
-    # Try to see if we can load it from disk
-    return load()
+    """Return True if a repository is currently indexed."""
+    return _store is not None

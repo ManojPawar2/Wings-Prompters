@@ -28,10 +28,10 @@ LLM_MODEL = "llama-3.3-70b-versatile"
 
 
 def _get_llm() -> ChatGroq:
-    api_key = os.getenv("GROQ_API_KEY_RAG") or os.getenv("GROQ_API_KEY")
+    api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         raise EnvironmentError(
-            "GROQ_API_KEY_RAG is not set. "
+            "GROQ_API_KEY is not set. "
             "Please check your .env file."
         )
     return ChatGroq(
@@ -52,7 +52,7 @@ You will be provided with the text of filtered files relevant to the query to he
 Follow these guidelines:
 1. Use the provided code context as your primary source of truth. Always cite the specific `FILE_PATH` when referencing code.
 2. If the context does not explicitly contain the full exact answer, do NOT reject the question. Use your general programming knowledge to deduce, infer, or explain how it likely works based on the framework and available snippets.
-3. Be as helpful as possible. Use **bolding** for important filenames or concepts. Use bullet points for lists.
+3. Be as helpful as possible. For complex questions, provide the best architectural or conceptual answer you can derive from the snippets. For simple questions, just answer it directly.
 4. Do not completely invent unknown file contents, but you may explain standard framework conventions and how this repository likely follows them.
 5. Be concise, precise, and highly technical.
 """.strip()
@@ -151,11 +151,7 @@ def chat(question: str, mode: str) -> dict:
         )
 
     # 1. Retrieve top-50 relevant chunks (massive context for Gemini flash)
-    try:
-        docs: list[Document] = rag_service.retrieve(question, k=50)
-    except Exception as e:
-        logger.warning(f"RAG retrieval failed critically: {e}")
-        docs = [Document(page_content="Error retrieving specific code snippets. Please answer from general architectural knowledge of this repository.", metadata={"file_path": "ERROR"})]
+    docs: list[Document] = rag_service.retrieve(question, k=50)
 
     if not docs:
         return {
