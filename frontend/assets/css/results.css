@@ -376,6 +376,32 @@
   opacity: 0.85;
 }
 
+/* Banner shown on the results page when an analysis request fails. */
+.error-container {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--red);
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin: 0 0 1.5rem;
+  line-height: 1.5;
+}
+
+.error-container.hidden {
+  display: none;
+}
+
+.error-container p {
+  margin: 0;
+}
+
+.error-container::before {
+  content: "⚠ ";
+  font-weight: 700;
+}
+
 .diagram-page-header {
   margin-bottom: 1.5rem;
 }

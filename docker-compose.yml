@@ -1,0 +1,31 @@
+# Run the whole app locally in Docker:
+#   docker compose up --build
+# Backend (analysis + RAG) -> http://localhost:8000
+# Frontend (static UI)     -> http://localhost:5500/index.html
+#
+# The frontend auto-points at the backend on 127.0.0.1:8000 (see the local
+# override in frontend/index.html), so both ports just need to be mapped here.
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: navigit-backend:latest
+    container_name: navigit-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - backend/.env          # injects your Gemini / Groq / GitHub keys at runtime
+    restart: unless-stopped
+
+  frontend:
+    image: python:3.11-slim
+    container_name: navigit-frontend
+    working_dir: /site
+    volumes:
+      - ./frontend:/site:ro   # serve the static files straight from the repo
+    ports:
+      - "5500:5500"
+    command: python -m http.server 5500
+    restart: unless-stopped
