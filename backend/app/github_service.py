@@ -24,11 +24,16 @@ from app.config import GITHUB_TOKEN, GITHUB_REQUEST_TIMEOUT
 logger = logging.getLogger(__name__)
 
 _BASE = "https://api.github.com"
+# Only attach the Authorization header when a real token is present. An empty
+# token would produce the illegal header "Bearer " and crash httpx; omitting it
+# falls back to anonymous access (fine for public repos, lower rate limit).
 _HEADERS = {
     "Accept": "application/vnd.github+json",
-    "Authorization": f"Bearer {GITHUB_TOKEN}",
     "X-GitHub-Api-Version": "2022-11-28",
 }
+_token = (GITHUB_TOKEN or "").strip()
+if _token and _token != "your_token":
+    _HEADERS["Authorization"] = f"Bearer {_token}"
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────

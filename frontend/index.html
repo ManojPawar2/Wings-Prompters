@@ -315,6 +315,43 @@
     </div>
   </aside>
 
+  <script>
+    // ── Backend URL configuration (analyze + RAG share ONE backend) ──────────
+    // Resolution order:
+    //   1. ?api=<url> in the page URL  (sticky: remembered in localStorage)
+    //   2. a previously remembered ?api= value
+    //   3. localhost auto -> http://127.0.0.1:8000   (when run locally)
+    //   4. PROD_BACKEND   -> your deployed backend's public HTTPS URL
+    //
+    // 👉 When your backend has a public URL (ngrok / Cloudflare Tunnel / HF
+    //    Spaces / your domain), paste it into PROD_BACKEND below and redeploy.
+    //    To test the live site WITHOUT redeploying, just visit:
+    //      https://<your-site>.vercel.app/?api=https://your-backend-url
+    (function () {
+      const PROD_BACKEND = 'https://invisible-yeah-export-hints.trycloudflare.com';   // Cloudflare Tunnel -> local Docker backend
+
+      const strip = (u) => (u || '').trim().replace(/\/+$/, '');
+      const params = new URLSearchParams(location.search);
+      const fromQuery = strip(params.get('api'));
+      if (fromQuery) { try { localStorage.setItem('navigit_api_base', fromQuery); } catch (e) {} }
+
+      let saved = '';
+      try { saved = localStorage.getItem('navigit_api_base') || ''; } catch (e) {}
+
+      const h = location.hostname;
+      const isLocal = h === 'localhost' || h === '127.0.0.1' || location.protocol === 'file:';
+
+      const backend = fromQuery || saved || (isLocal ? 'http://127.0.0.1:8000' : strip(PROD_BACKEND));
+
+      if (backend) {
+        window.__API_BASE__ = backend;
+        window.__RAG_API_BASE__ = backend;
+        console.log('[NAVIgit] backend =', backend);
+      } else {
+        console.warn('[NAVIgit] No backend URL set. Add ?api=<url> or set PROD_BACKEND in index.html.');
+      }
+    })();
+  </script>
   <script src="assets/js/validator.js"></script>
   <script src="assets/js/ui.js"></script>
   <script src="assets/js/results.js"></script>
