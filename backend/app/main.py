@@ -17,6 +17,15 @@ from app.routes import router
 from api.rag_routes import router as rag_router
 
 # ── Logging ─────────────────────────────────────────────────────────────────
+# The log format and several messages use box-drawing characters (│, ═). On
+# Windows the console/redirect defaults to cp1252, which cannot encode them and
+# crashes the logging handler with UnicodeEncodeError. Force UTF-8 first.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="backslashreplace")
+    except (AttributeError, ValueError):
+        pass
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s │ %(levelname)-7s │ %(name)s │ %(message)s",

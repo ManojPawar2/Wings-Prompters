@@ -53,7 +53,7 @@ def build(documents: list[Document], embeddings_list: list[GoogleGenerativeAIEmb
     # Reset store for fresh build
     _store = None
     
-    BATCH_SIZE = 20
+    BATCH_SIZE = 20   # keep within the embedding model's per-request batch limit
     batches = [documents[i:i + BATCH_SIZE] for i in range(0, len(documents), BATCH_SIZE)]
     
     print(f"[DEBUG] Starting Parallel Indexing for {len(documents)} chunks across {len(embeddings_list)} keys...")
@@ -66,8 +66,10 @@ def build(documents: list[Document], embeddings_list: list[GoogleGenerativeAIEmb
         batch = batches[batch_idx]
         # Assign a key based on batch index (rotation)
         key_idx = batch_idx % len(embeddings_list)
-        
-        retries = 3
+
+        # gemini-embedding-001 has a low free-tier rate limit, so be patient on
+        # 429s (exponential-ish backoff) rather than giving up and dropping chunks.
+        retries = 6
         while retries > 0:
             try:
                 current_embedding = embeddings_list[key_idx]
@@ -75,23 +77,24 @@ def build(documents: list[Document], embeddings_list: list[GoogleGenerativeAIEmb
             except Exception as e:
                 error_str = str(e).upper()
                 is_quota = "429" in error_str or "RESOURCE_EXHAUSTED" in error_str or "QUOTA" in error_str
-                
+
                 if is_quota:
-                    # Respect 60s cooldown or rotate keys
-                    print(f"[DEBUG] Key {key_idx+1} hit rate limit. Rotating...")
+                    # Rotate to the next key, then wait out the rate window.
                     key_idx = (key_idx + 1) % len(embeddings_list)
-                    time.sleep(2)
+                    wait = min(2 ** (6 - retries), 16)
+                    print(f"[DEBUG] Batch {batch_idx}: rate limit, rotating to key {key_idx+1}, waiting {wait}s")
+                    time.sleep(wait)
                 else:
                     print(f"[DEBUG] Batch {batch_idx} failed: {e}")
-                    retries -= 1
                     time.sleep(1)
-                
+
                 retries -= 1
         return None
 
-    # Process all batches in parallel using a thread pool
-    # We limit workers based on number of keys to hit all of them at once
-    max_workers = max(len(embeddings_list), 4)
+    # One worker PER KEY: steady throughput that respects the per-key rate limit
+    # instead of bursting many concurrent calls onto a low free-tier quota (which
+    # caused constant 429s, retry sleeps, and dropped batches).
+    max_workers = len(embeddings_list)
     merge_lock = threading.Lock()
     
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -111,10 +114,17 @@ def build(documents: list[Document], embeddings_list: list[GoogleGenerativeAIEmb
                 if completed_count % 5 == 0 or completed_count == len(batches):
                     print(f"[DEBUG] Parallel Progress: {completed_count}/{len(batches)} batches indexed.")
 
+    # If every batch failed (e.g. embedding rate limit exhausted), fail loudly
+    # instead of leaving an empty store that makes later /rag/chat say "not indexed".
+    if _store is None:
+        raise RuntimeError(
+            "Failed to build the vector index — all embedding batches failed "
+            "(likely the Gemini embedding free-tier rate limit). Try again shortly."
+        )
+
     # Save to disk for persistence across restarts
-    if _store:
-        print(f"[DEBUG] Saving index to disk: {PERSIST_DIRECTORY}")
-        _store.save_local(PERSIST_DIRECTORY)
+    print(f"[DEBUG] Saving index to disk: {PERSIST_DIRECTORY}")
+    _store.save_local(PERSIST_DIRECTORY)
 
     print(f"[DEBUG] Parallel Indexing complete! Total time: {time.time() - t_start:.2f}s.")
 

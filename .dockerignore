@@ -1,0 +1,19 @@
+# Keep the build context small and the image clean.
+.git
+.venv
+**/__pycache__
+**/*.py[cod]
+*.log
+
+# Local vector index — rebuilt at runtime, never ship it
+faiss_index/
+.faiss_index/
+.navigit_faiss_index/
+
+# NEVER bake secrets into the image — injected at runtime via env vars instead
+backend/.env
+.env
+*.env
+
+# The frontend is served by its own container (or any static host), not the backend image
+frontend/

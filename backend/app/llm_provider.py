@@ -14,7 +14,8 @@ from langchain_groq import ChatGroq
 from app.config import (
     GEMINI_API_KEY_PRIMARY,
     GEMINI_API_KEY_SECONDARY,
-    GROQ_API_KEY,
+    GROQ_API_KEY_PRIMARY,
+    GROQ_API_KEY_SECONDARY,
     GEMINI_MODEL,
     GROQ_MODEL,
     LLM_REQUEST_TIMEOUT,
@@ -97,14 +98,15 @@ class GeminiSecondaryProvider(GeminiProviderBase):
         super().__init__(GEMINI_API_KEY_SECONDARY, "Gemini Secondary")
 
 
-class GroqProvider(LLMProvider):
-    def __init__(self):
-        if not GROQ_API_KEY:
-            raise ValueError("Missing API key for Groq")
+class GroqProviderBase(LLMProvider):
+    def __init__(self, key: str, name: str):
+        self._name = name
+        if not key:
+            raise ValueError(f"Missing API key for {self._name}")
 
         self._llm = ChatGroq(
             model_name=GROQ_MODEL,
-            groq_api_key=GROQ_API_KEY,
+            groq_api_key=key,
             temperature=0.2,
             timeout=LLM_REQUEST_TIMEOUT,
             max_retries=0,
@@ -112,7 +114,7 @@ class GroqProvider(LLMProvider):
 
     @property
     def name(self) -> str:
-        return "Groq"
+        return self._name
 
     async def generate(self, system_prompt: str, user_prompt: str) -> str:
         messages = [
@@ -135,12 +137,27 @@ class GroqProvider(LLMProvider):
             raise
 
 
+class GroqPrimaryProvider(GroqProviderBase):
+    def __init__(self):
+        super().__init__(GROQ_API_KEY_PRIMARY, "Groq Primary")
+
+
+class GroqSecondaryProvider(GroqProviderBase):
+    def __init__(self):
+        super().__init__(GROQ_API_KEY_SECONDARY, "Groq Secondary")
+
+
 async def generate_with_fallback(system_prompt: str, user_prompt: str) -> str:
     """Orchestrates sequential fallovers across multiple LLM providers."""
     providers = []
     
     # Initialize configured providers strictly in sequence
-    for ProviderClass in [GeminiPrimaryProvider, GeminiSecondaryProvider, GroqProvider]:
+    for ProviderClass in [
+        GeminiPrimaryProvider,
+        GeminiSecondaryProvider,
+        GroqPrimaryProvider,
+        GroqSecondaryProvider,
+    ]:
         try:
             providers.append(ProviderClass())
         except ValueError as e:

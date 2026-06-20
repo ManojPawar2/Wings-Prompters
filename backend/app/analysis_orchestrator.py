@@ -135,10 +135,7 @@ async def run_analysis(github_url: str) -> AnalyzeResponse:
     if entry_content is None:
         entry_content = await fetch_file_content(owner, repo, flow_entry_file) or ""
 
-    # 9. M1 — folder explanation (LLM call #1)
-    m1_result = await explain_folder_structure(folder_signal)
-
-    # 10. M2 — execution flow reasoning (LLM call #2, sequential to avoid 429)
+    # 9. Build M2's extra context first (no LLM) so M1 and M2 can run together.
     extra_ctx = ""
     if entry_content:
         import re as _re
@@ -199,9 +196,15 @@ async def run_analysis(github_url: str) -> AnalyzeResponse:
                     extra_ctx = fetched[:3000]
                     break
 
-    execution_flow = await explain_execution_flow(flow_entry_file, entry_content, extra_ctx)
+    # 10. Run M1 (folder explanation) and M2 (execution flow) CONCURRENTLY — they
+    #     are independent LLM calls, so parallelising ~halves the total LLM wait.
+    #     The provider-fallback chain still handles any per-call rate limits.
+    m1_result, execution_flow = await asyncio.gather(
+        explain_folder_structure(folder_signal),
+        explain_execution_flow(flow_entry_file, entry_content, extra_ctx),
+    )
 
-    # 10. M3 — dependency graph (pure Python, no LLM)
+    # 11. M3 — dependency graph (pure Python, no LLM)
     nodes, edges, summary = build_dependency_graph(file_contents, all_paths)
 
     # 11. Assemble response

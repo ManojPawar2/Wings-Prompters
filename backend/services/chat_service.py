@@ -12,12 +12,15 @@ Modes
   B3 — Intelligent Repository Summary
 """
 
+import logging
 import os
 from langchain_core.documents import Document
 from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from . import rag_service, vector_store
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # LLM setup (Groq - Llama3)
@@ -26,18 +29,70 @@ from . import rag_service, vector_store
 # Optimized for code analysis and complex reasoning
 LLM_MODEL = "llama-3.3-70b-versatile"
 
+# Error fragments that mean "this key is exhausted — try the next one".
+_FAILOVER_HINTS = ("429", "quota", "rate limit", "rate_limit", "too many requests")
 
-def _get_llm() -> ChatGroq:
-    api_key = os.getenv("GROQ_API_KEY")
-    if not api_key:
-        raise EnvironmentError(
-            "GROQ_API_KEY is not set. "
-            "Please check your .env file."
-        )
+
+def _candidate_groq_keys() -> list[str]:
+    """
+    Groq API keys in priority order: primary → secondary.
+
+    Falls back to the legacy single-key names so existing .env files keep
+    working. Duplicates (e.g. primary == legacy key) are collapsed.
+    """
+    primary = (
+        os.getenv("GROQ_API_KEY_PRIMARY")
+        or os.getenv("GROQ_API_KEY")
+        or os.getenv("GROQ_API_KEY_RAG", "")
+    )
+    secondary = os.getenv("GROQ_API_KEY_SECONDARY", "")
+
+    ordered: list[str] = []
+    for key in (primary, secondary):
+        if key and key not in ordered:
+            ordered.append(key)
+    return ordered
+
+
+def _make_llm(api_key: str) -> ChatGroq:
     return ChatGroq(
         model_name=LLM_MODEL,
         groq_api_key=api_key,
         temperature=0,  # Strict grounding for code analysis
+        max_retries=0,  # Failover is handled here, not inside the client
+    )
+
+
+def _invoke_with_failover(messages: list) -> str:
+    """
+    Invoke Groq with the primary key, transparently failing over to the
+    secondary key on quota / rate-limit errors. Non-quota errors propagate
+    immediately (no point retrying a bad request on another key).
+    """
+    keys = _candidate_groq_keys()
+    if not keys:
+        raise EnvironmentError(
+            "No Groq API key set. Add GROQ_API_KEY_PRIMARY (and optionally "
+            "GROQ_API_KEY_SECONDARY) to your .env file."
+        )
+
+    last_error: Exception | None = None
+    for idx, key in enumerate(keys):
+        label = "primary" if idx == 0 else "secondary"
+        try:
+            response = _make_llm(key).invoke(messages)
+            return response.content if hasattr(response, "content") else str(response)
+        except Exception as exc:  # noqa: BLE001 — classify then re-raise/continue
+            last_error = exc
+            err = str(exc).lower()
+            if any(hint in err for hint in _FAILOVER_HINTS) and idx < len(keys) - 1:
+                logger.warning("[RAG] Groq %s key hit quota/rate-limit; failing over", label)
+                continue
+            raise
+
+    # Loop only exhausts when every key hit a quota/rate-limit error.
+    raise RuntimeError(
+        f"All Groq keys exhausted (quota/rate-limit). Last error: {last_error}"
     )
 
 
@@ -150,8 +205,10 @@ def chat(question: str, mode: str) -> dict:
             "Please call POST /rag/index with a GitHub URL first."
         )
 
-    # 1. Retrieve top-50 relevant chunks (massive context for Gemini flash)
-    docs: list[Document] = rag_service.retrieve(question, k=50)
+    # 1. Retrieve the most relevant chunks. k=18 keeps strong grounding while
+    #    keeping the prompt small enough for fast generation (k=50 was ~3x the
+    #    context and dominated chat latency for little quality gain).
+    docs: list[Document] = rag_service.retrieve(question, k=18)
 
     if not docs:
         return {
@@ -163,14 +220,12 @@ def chat(question: str, mode: str) -> dict:
     system_prompt = _build_system_prompt(mode)
     human_message = _build_human_message(question, docs)
 
-    # 3. Call Gemini LLM
-    llm = _get_llm()
+    # 3. Call the Groq LLM (primary key, with automatic failover to secondary)
     messages = [
         SystemMessage(content=system_prompt),
         HumanMessage(content=human_message),
     ]
-    response = llm.invoke(messages)
-    answer_text = response.content if hasattr(response, "content") else str(response)
+    answer_text = _invoke_with_failover(messages)
 
     # 4. Collect source file references
     sources = _extract_sources(docs)

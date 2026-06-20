@@ -11,6 +11,7 @@ import logging
 import re
 from typing import Any
 
+import httpx
 from fastapi import APIRouter, BackgroundTasks
 from fastapi.responses import JSONResponse
 
@@ -253,8 +254,10 @@ async def analyze(request: AnalyzeRequest, background_tasks: BackgroundTasks) ->
         
         def trigger_rag_indexing(url: str, repo: str):
             try:
-                # Fire and forget request to the RAG service
-                httpx.post(f"{url}/rag/index", json={"github_url": repo}, timeout=10.0)
+                # Runs as a background task, so we wait for indexing to finish.
+                # Embedding a repo takes ~30-60s; a short timeout would abort it.
+                resp = httpx.post(f"{url}/rag/index", json={"github_url": repo}, timeout=300.0)
+                logger.info("[RAG] indexing of %s -> HTTP %s", repo, resp.status_code)
             except Exception as e:
                 logger.error(f"Failed to trigger RAG indexer: {e}")
 
@@ -265,9 +268,33 @@ async def analyze(request: AnalyzeRequest, background_tasks: BackgroundTasks) ->
         logger.info("[API] dependency graph normalized")
         logger.info("[API] response sent")
         return AnalyzeResponse(**normalized_payload)
+    except ValueError as exc:
+        # Bad / unparseable GitHub URL
+        logger.warning("Invalid repository URL: %s", exc)
+        return JSONResponse(status_code=400, content={"error": f"Invalid GitHub URL: {exc}"})
+    except httpx.HTTPStatusError as exc:
+        status = exc.response.status_code
+        if status == 404:
+            msg = (
+                "Repository not found. Check the URL is spelled correctly and the "
+                "repository is public — or that your GITHUB_TOKEN has access to it."
+            )
+            return JSONResponse(status_code=404, content={"error": msg})
+        if status in (401, 403):
+            msg = (
+                "GitHub denied access (rate limit or invalid token). Add or refresh "
+                "GITHUB_TOKEN in backend/.env, then restart the backend."
+            )
+            return JSONResponse(status_code=status, content={"error": msg})
+        logger.exception("GitHub returned an error: %s", exc)
+        return JSONResponse(status_code=502, content={"error": f"GitHub error ({status})."})
     except Exception as exc:
         logger.exception("Analysis failed: %s", exc)
-        return JSONResponse(status_code=500, content=_ERROR_PAYLOAD)
+        # Surface the real cause so failures are diagnosable instead of opaque.
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Analysis failed: {type(exc).__name__}: {exc}"},
+        )
 
 
 @router.post("/chat", response_model=ChatResponse)
