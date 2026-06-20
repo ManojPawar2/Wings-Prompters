@@ -1,0 +1,6 @@
+# Normalize line endings across OSes (silences CRLF/LF warnings)
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
